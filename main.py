@@ -13,6 +13,7 @@ import time
 import tempfile
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
 
 from configparser import ConfigParser
 
@@ -22,9 +23,16 @@ config.read("config.conf")
 url = config.get("general", "url")
 render_path = config.get("general", "render_path")
 file_name = config.get("general", "file_name")
+driver_path = config.get("general", "driver_path")
+binary_location = config.get("general", "binary_location")
 
 # open the browser
+if driver_path is not None and driver_path != "":
+    service = Service(executable_path=driver_path)
+
 options = webdriver.ChromeOptions()
+if binary_location is not None and binary_location != "":
+    options.binary_location = binary_location
 options.add_argument("--incognito")
 options.add_argument("window-size=1920,1080")
 options.add_argument("--headless")
@@ -33,7 +41,11 @@ options.add_argument("--disable-extensions")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 
-browser = webdriver.Chrome(options=options)
+if driver_path is not None and driver_path != "":
+    browser = webdriver.Chrome(options=options, service=service)
+else:
+    browser = webdriver.Chrome(options=options)
+
 print("[INFO] Browser opened")
 browser.get(url)
 print("[INFO] Page loaded")
