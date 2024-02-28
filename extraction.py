@@ -13,20 +13,54 @@ import time
 import tempfile
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
 
 from configparser import ConfigParser
 import tkinter as tk
 from tkinter.messagebox import showwarning, showerror
 
+from configparser import ConfigParser
+
 class Extraction:
-    def __init__(self, root: tk.Tk, status: tk.StringVar, progress_bar_var: tk.IntVar) -> None:
+    def __init__(self, root: tk.Tk = None, status: tk.StringVar = None, progress_bar_var: tk.IntVar = None) -> None:
         self.root = root
         self.status = status
         self.progress_bar_var = progress_bar_var
+
+        # default file path
+        self.file_path = "render.pdf"
+
+        config = ConfigParser()
+        config.read("config.conf")
+
+        self.driver_path = config.get("general", "driver_path")
+        self.binary_location = config.get("general", "binary_location")
+
+
+    def name_to_filename(self, name):
+        """Convert a name to a valid filename"""
+        avoid = ["\\", "/", ":", "*", "?", "\"", "<", ">", "|"]
+        for char in avoid:
+            name = name.replace(char, "")
+        return name
+    
+    def progress_set_status(self, status, value):
+        if self.status is not None:
+            self.status.set(status)
+        else:
+            print(f"[INFO] {status}")
+        if self.progress_bar_var is not None:
+            self.progress_bar_var.set(value)
         
-        
-    def extract(self, url, render_path):
+    def extract(self, url, render_path, is_directory=False):
         # open the browser
+        if self.driver_path is not None and self.driver_path != "":
+            service = Service(executable_path=self.driver_path)
+
+        options = webdriver.ChromeOptions()
+        if self.binary_location is not None and self.binary_location != "":
+            options.binary_location = self.binary_location
+
         options = webdriver.ChromeOptions()
         options.add_argument("--incognito")
         options.add_argument("window-size=1920,1080")
@@ -36,23 +70,28 @@ class Extraction:
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
 
-        browser = webdriver.Chrome(options=options)
+        if self.driver_path is not None and self.driver_path != "":
+            browser = webdriver.Chrome(options=options, service=service)
+        else:
+            browser = webdriver.Chrome(options=options)
 
-        self.status.set("Opening the browser")
-        self.progress_bar_var.set(10)
+        self.progress_set_status("Opening the browser", 10)
 
         browser.get(url)
         
-        self.status.set("Waiting for the page to load")
-        self.progress_bar_var.set(20)
+        self.progress_set_status("Waiting for the page to load", 20)
 
         # remove the cookie banner
         try:
-            self.status.set("Removing the cookie banner")
+            self.progress_set_status("Removing the cookie banner")
 
             browser.find_element(By.CLASS_NAME, "css-1ucyjdz").click()
         except:
             pass
+
+        # get the title of the score and convert it to a valid filename
+        title = browser.find_element(By.CLASS_NAME, "nFRPI").text
+        title = self.name_to_filename(title) + ".pdf"
 
         # get the number of pages
         scroll_widget = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.ID, "jmuse-scroller-component")))
@@ -68,8 +107,7 @@ class Extraction:
         browser.execute_script(f"arguments[0].scrollTop += {15};", scroll_widget)
         for i in range(nb_pages):
 
-            self.status.set(f"Downloading the page {i+1}/{nb_pages}")
-            self.progress_bar_var.set(20 + int(ratio*(i+1)))
+            self.progress_set_status(f"Downloading the page {i+1}/{nb_pages}", 20 + int(ratio*(i+1)))
 
             # wait for the image to load
             img = None
@@ -112,7 +150,6 @@ class Extraction:
             height = int(taille[0])
             height = int(float(taille[1]))
             
-
             # scroll down to load the next page
             browser.execute_script(f"arguments[0].scrollTop += {height+15};", scroll_widget)
             time.sleep(0.5)
@@ -128,11 +165,14 @@ class Extraction:
         for i in range(nb_pages):
             merger.append(fr"{temp_dir}\page{i}.pdf")
 
-        self.status.set("Merging the pdf files")
-        self.progress_bar_var.set(95)
+        self.progress_set_status("Merging the pdf files", 95)
+
+        if is_directory:
+            render_path = render_path + "\\" + title
+        
+        self.file_path = render_path
 
         merger.write(render_path)
         merger.close()     
 
-        self.progress_bar_var.set(100)
-        self.status.set("Done")
+        self.progress_set_status("Done", 100)

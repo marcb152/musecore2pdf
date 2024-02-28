@@ -35,28 +35,40 @@ class Gui():
         self.button_browse = tk.Button(self.root, text="Browse", command=self.browse)
         self.button_browse.grid(row=2, column=2, pady=10)
 
+        # Check box to open the PDF as a directory
+        self.check_box_var = tk.BooleanVar()
+        self.check_box = tk.Checkbutton(self.root, text="Open as directory (name will be automatically generated)", variable=self.check_box_var) 
+        self.check_box.grid(row=3, column=1, columnspan=2)
+
         # Convert button to initiate the conversion process
         self.button_convert = tk.Button(self.root, text="Convert", command=self.convert)
-        self.button_convert.grid(row=3, column=1, pady=10)
+        self.button_convert.grid(row=4, column=1, pady=10)
 
         # Progress bar and label for status information
         progress_frame = tk.Frame(self.root)
-        progress_frame.grid(row=4, column=0, pady=10, columnspan=3)
+        progress_frame.grid(row=5, column=0, pady=10, columnspan=3)
         self.progress_bar_var = tk.IntVar()
         self.progress_bar = ttk.Progressbar(progress_frame, orient="horizontal", length=350, mode="determinate", variable=self.progress_bar_var, maximum=100)
         self.progress_bar.grid(row=0, column=0, pady=10)
         self.label_status_var = tk.StringVar()
-        self.label_status_var.set("Status")
+        self.label_status_var.set("")
         self.label_status = tk.Label(progress_frame, textvariable=self.label_status_var, font=("Arial", 10))
         self.label_status.grid(row=0, column=1, pady=10, columnspan=2)
 
         self.root.mainloop()
 
     def browse(self):
-        # Open a file dialog to select PDF file destination
-        file_path = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF", "*.pdf")] )
-        self.entry_path.delete(0, tk.END)
-        self.entry_path.insert(0, file_path)
+        if self.check_box_var.get():
+            # Open a file dialog to select directory
+            file_path = filedialog.askdirectory()
+            self.entry_path.delete(0, tk.END)
+            self.entry_path.insert(0, file_path)
+
+        else:
+            # Open a file dialog to select PDF file destination
+            file_path = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF", "*.pdf")] )
+            self.entry_path.delete(0, tk.END)
+            self.entry_path.insert(0, file_path)
 
     def convert(self):
         # Perform validation and initiate the conversion process
@@ -74,21 +86,26 @@ class Gui():
             self.button_convert.config(state="disabled")
             self.entry_path.config(state="disabled")
             self.entry_url.config(state="disabled")
+            self.check_box.config(state="disabled")
 
             # Initialize Extraction class and start extraction in a separate thread
             self.extraction = Extraction(self.root, self.label_status_var, self.progress_bar_var)
-            self.thread = Thread(target=self.extraction.extract, args=(url, render_path))
+            self.thread = Thread(target=self.extraction.extract, args=(url, render_path, self.check_box_var.get()))
             self.thread.start()
 
             # Wait for the thread to finish and update the UI
             while self.thread.is_alive():
                 self.root.update()
 
+            render_path = self.extraction.file_path
+            print(render_path)
+
             # Enable UI elements after conversion is complete
             self.button_browse.config(state="normal")
             self.button_convert.config(state="normal")
             self.entry_path.config(state="normal")
             self.entry_url.config(state="normal")
+            self.check_box.config(state="normal")
 
             # Reset progress bar and status label, and open the rendered PDF
             self.progress_bar_var.set(0)
