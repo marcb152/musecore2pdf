@@ -26,6 +26,7 @@ class Extraction:
         self.root = root
         self.status = status
         self.progress_bar_var = progress_bar_var
+        self.kill_ = False
 
         # default file path
         self.file_path = "render.pdf"
@@ -35,6 +36,9 @@ class Extraction:
 
         self.driver_path = config.get("general", "driver_path")
         self.binary_location = config.get("general", "binary_location")
+
+    def kill(self):
+        self.kill_ = True
 
 
     def name_to_filename(self, name):
@@ -83,7 +87,7 @@ class Extraction:
 
         # remove the cookie banner
         try:
-            self.progress_set_status("Removing the cookie banner")
+            self.progress_set_status("Removing the cookie banner", 25)
 
             browser.find_element(By.CLASS_NAME, "css-1ucyjdz").click()
         except:
@@ -114,6 +118,10 @@ class Extraction:
             while img == None:
                 time.sleep(0.5)
                 img = pages[i].find_element(By.TAG_NAME, "img").get_attribute("src")
+
+                if self.kill_ == True:
+                    browser.close()
+                    return
 
             if ".svg" in img:
                 r = requests.get(img)
@@ -169,7 +177,7 @@ class Extraction:
 
         if is_directory:
             render_path = render_path + "\\" + title
-        
+
         self.file_path = render_path
 
         merger.write(render_path)

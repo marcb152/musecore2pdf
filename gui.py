@@ -57,6 +57,15 @@ class Gui():
 
         self.root.mainloop()
 
+    def on_closing(self):
+        # Close the application
+        self.root.destroy()
+
+        if self.thread.is_alive():
+            # kill the thread if the application is closed
+            self.extraction.kill()
+            self.thread.join()
+
     def browse(self):
         if self.check_box_var.get():
             # Open a file dialog to select directory
@@ -98,7 +107,6 @@ class Gui():
                 self.root.update()
 
             render_path = self.extraction.file_path
-            print(render_path)
 
             # Enable UI elements after conversion is complete
             self.button_browse.config(state="normal")
