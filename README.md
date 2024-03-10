@@ -38,9 +38,13 @@ python musecore2pdf.py
 Modify the `config.conf` file to customize the script behavior:
 ```ini
 [general]
-url = https://musescore.com/sheetmusic/some-sheet-music
-render_path = /path/to/render
-file_name = output.pdf
+binary_location = path/to/BraveSoftware/Brave-Browser/Application/brave.exe
+driver_path = path/to/chromedriver-win64/chromedriver.exe
+
+[main.py]
+url = https://musescore.com/user/xxx/scores/xxx
+file_name = render.pdf
+render_path = path/to/musecore2pdf
 ```
 
 Feel free to contribute or report issues!
