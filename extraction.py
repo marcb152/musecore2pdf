@@ -65,7 +65,6 @@ class Extraction:
         if self.binary_location is not None and self.binary_location != "":
             options.binary_location = self.binary_location
 
-        options = webdriver.ChromeOptions()
         options.add_argument("--incognito")
         options.add_argument("window-size=1920,1080")
         options.add_argument("--headless")
